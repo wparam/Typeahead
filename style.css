@@ -1,0 +1,27 @@
+.autocomplete-container{
+	width: 100%;
+	position: relative;
+}
+
+.autocomplete-container input{
+  font-size: 1.2em;
+  width: 100%;
+  padding:0.3em;
+}
+
+.autocomplete-container .dropdown-menu{
+  width:100%;
+  display: block;
+  margin: 0;
+}
+.autocomplete-container .dropdown-menu > li > a:hover,
+.autocomplete-container .dropdown-menu > li > a:focus {
+  text-decoration: none;
+  color: #262626;
+  
+}
+
+.autocomplete-container .dropdown-menu > li .active{
+	background-color: #82D2E2;
+}
+

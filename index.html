@@ -13,13 +13,17 @@
 		var app = angular.module("app", ['myapp']);
 		app.controller('testController', ['$scope', function($scope){
 			$scope.emaillist = [
-				{title: 'Aleeen@a.com'},
-				{title: 'Blexxxdhgc@a.com'},
-				{title: 'Cwidjq@a.com'},
-				{title: 'Ddfqqddw@a.com'},
-				{title: 'Blexxx@a.com'}
+				{title: 'Aleeen@a.com', name: '1', id:1},
+				{title: 'Blexxxdhgc@a.com', name: '2', id:2},
+				{title: 'Cwidjq@a.com',name: '3', id:3},
+				{title: 'Ddfqqddw@a.com',name: '4', id:4},
+				{title: 'Blexxx@a.com',name: '5', id:5}
 			];
 			$scope.test = "abcd";
+
+			$scope.docustomaction = function(){
+				console.log('hit cus action');
+			};
 		}]);
 	})();
 	
@@ -28,7 +32,7 @@
 <body ng-app="app">
 	<div ng-controller="testController">
 		<div style="width:800px">
-			<div ac delimiter=";" dataInputCol="emaillist" searchfield="emailname" placeholder="Please input email address, use ; to seperate" ></div>
+			<div ac delimiter=";" datainputcol="emaillist" docustomaction="docustomaction" ignorefield="@a.com" searchfield="title" placeholder="Please input email address, use ; to seperate" ></div>
 		</div>
 	</div>
 	

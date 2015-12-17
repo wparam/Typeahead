@@ -9,8 +9,9 @@
 				'<div class="dropdown">' + 
 					'<input type="text" ng-Model="inputText" placeholder={{placeholder}}/>' + 
 					'<div ng-show="showResult">' + 
-						'<ul class="dropdown-menu">' +
-							'<li ng-class="$index === curIdx ? \'active\': \'\'" ng-repeat="item in selectedList"><a>{{item.displayText}}</a></li>' + 
+						'<ul class="dropdown-menu" >' +
+							'<li ng-class="$index === curIdx ? \'active\': \'\'" ng-repeat="item in dataList | filter: selected===true"><a>{{item.displayText}}</a></li>' + 
+							'<li ng-show="dataList.length===0"><a>No Match Result</a></li>' + 
 						'</ul>' +
 					'</div>' + 
 				'</div>' +
@@ -23,18 +24,19 @@
 				"placeholder" : "@placeholder",
 				"searchfield" : "@searchfield",
 				"ignorefield" : "@ignorefield",
-				"dataInputCol" : "=dataInputCol"
+				"datainputcol" : "=datainputcol",
+				"docustomaction": "=doCustomAction"
 			},
 			templateUrl: function(ele, attrs){
 				return attrs.templateurl || 'default.html';
 			},
 			link: function($scope, ele,  attr){
-				$scope.showResult = true;
+				$scope.showResult = false;
 				$scope.lastSearchTerm = "";
 				$scope.searchTerm = "";
 				$scope.curIdx = -1;
 				$scope.dataList = []; //all elements 
-				$scope.selectedList = []; //[{title: "abc", name:xxx, displayText:xxx}]
+				$scope.selectedList = []; //[{searchTitle: "abc", title:xxx, displayText:xxx}]
 
 				var Keys = {
 					LEFT: 37,
@@ -77,7 +79,12 @@
 				};
 
 				$scope.doSearch = function(){
-
+					if(!$scope.searchTerm)
+						return;
+					_.forEach($scope.dataList, function(n, key){
+						n.selected = true;
+					});
+					console.log($scope.dataList);
 				};
 				var inputCtrl = ele.find('input');
 				ele.on('keyup', function(e){
@@ -102,17 +109,24 @@
 					e.stopPropagation();
 
 				});			
-				
 				//preprocess the datalist, deal with delimiter and igore term
-				$scope.processData = function(datalist, sfield){
+				var processData = function(datalist, sfield, ignore){
 					if(!datalist || datalist.length==0 || !sfield || !datalist[0][sfield])
 						return;
 					var result = [];
 					for(var i = 0; i<datalist.length; i++){
-						if(datalist[sfield].)
+						var ignoreIdx = datalist[i][sfield].indexOf(ignore);
+						if(ignoreIdx>=0){
+							var effectiveStr = datalist[i][sfield].substring(0, ignoreIdx);
+							result.push({
+								title: datalist[i][sfield],
+								searchTitle: effectiveStr
+							});
+						}
 					}
+					$scope.dataList = result;
 				}
-				
+				processData($scope.datainputcol, $scope.searchfield, $scope.ignorefield );
 			}
 		};	
 	}

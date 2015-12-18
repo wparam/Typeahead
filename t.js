@@ -1,17 +1,19 @@
 (function(){
 	///depend on lodash
 	angular.module("myapp", []).
-				directive("ac", ['$templateCache', aotuComplete]);
+				directive("ac", ['$templateCache', '$sce', '$timeout', aotuComplete]);
 
-	function aotuComplete($templateCache){	
+	function aotuComplete($templateCache, $sce,  $timeout){	
 		$templateCache.put('default.html', 
 			'<div class="autocomplete-container">' +
 				'<div class="dropdown">' + 
-					'<input type="text" ng-Model="inputText" placeholder={{placeholder}}/>' + 
-					'<div ng-show="showResult">' + 
+					'<input type="text" ng-Model="inputText" placeholder={{placeholder}} ng-blur="onBlur()"/>' + 
+					'<div ng-show="startSearch">' + 
 						'<ul class="dropdown-menu" >' +
-							'<li ng-class="$index === curIdx ? \'active\': \'\'" ng-repeat="item in dataList | filter: selected===true"><a>{{item.displayText}}</a></li>' + 
-							'<li ng-show="dataList.length===0"><a>No Match Result</a></li>' + 
+							'<li ng-class="$index === curIdx ? \'active\': \'\'" ng-repeat="item in dataList | filter: {match:true}">' + 
+								'<a ng-bind-html="item.displayText" ng-click="selectItem(item)"></a>' + 
+							'</li>' + 
+							'<li ng-show="{{(dataList | filter: {match:true}).length===0}}"><a><em><strong>No Match Result</strong></em></a></li>' + 
 						'</ul>' +
 					'</div>' + 
 				'</div>' +
@@ -31,13 +33,16 @@
 				return attrs.templateurl || 'default.html';
 			},
 			link: function($scope, ele,  attr){
-				$scope.showResult = false;
 				$scope.lastSearchTerm = "";
 				$scope.searchTerm = "";
+				$scope.startSearch = false; 
 				$scope.curIdx = -1;
 				$scope.dataList = []; //all elements 
+				$scope.isMatchItem = false;
 				$scope.selectedList = []; //[{searchTitle: "abc", title:xxx, displayText:xxx}]
 
+				var inputCtrl = ele.find('input'),
+					ulCtrl = ele.find('ul');
 				var Keys = {
 					LEFT: 37,
 					UP: 38,
@@ -58,6 +63,7 @@
 					$scope.doSearch();
 				});
 				
+
 				$scope.needSearch = function(newstr, oldstr){
 					//todo
 					if(newstr!==oldstr)
@@ -81,34 +87,73 @@
 				$scope.doSearch = function(){
 					if(!$scope.searchTerm)
 						return;
+					$scope.startSearch = true;
 					_.forEach($scope.dataList, function(n, key){
-						n.selected = true;
-					});
-					console.log($scope.dataList);
-				};
-				var inputCtrl = ele.find('input');
-				ele.on('keyup', function(e){
-					var keyCode = e.keyCode | e.which;
-					if(keyCode === Keys.Down){
-						if($scope.selectedList.length>0 && $scope.curIdx>=-1){
-							$scope.curIdx ++;
+						if(n.searchTitle && n.searchTitle.toLowerCase().indexOf($scope.searchTerm)>=0){
+							n.match = true;
+							var title = n.title;
+							var reg = new RegExp($scope.searchTerm, 'i');
+                            var replaceStr = title.match(reg)[0];
+                            n.displayText = $sce.trustAsHtml( title.replace(reg, '<span><strong>'+ replaceStr +'</strong></span>'));
 						}
-						
-					}
-					else if(keyCode === Keys.UP){
+						else{
+							n.match = false;
+						}
+					});
+				};
 
-					}
-					else if(keyCode === Keys.LEFT){
-
-					}
-					else if(keyCode === Keys.RIGHT){
-
+				$scope.selectItem = function(sitem){
+					$scope.selectedList.push(sitem);
+					_.forEach($scope.dataList, function(n, key){
+						n.match = false;
+					});
+				}
+				
+				$scope.onBlur = function(){
+					$timeout(function(){
+						//$scope.startSearch = false;	
+					});
+				}
+				
+				ele.on('keyup', function(e){
+					var keyCode = e.keyCode | e.which,
+						matchList = _.where($scope.dataList, {match: true});
+					switch(keyCode){
+						case Keys.DOWN: 
+							if(matchList.length>0 && $scope.curIdx>=-1 && matchList.length > $scope.curIdx+1 ){
+								$scope.curIdx++;
+							}
+							break;
+						case Keys.UP:
+							if(matchList.length>0 && $scope.curIdx>-1)
+								$scope.curIdx--;
+							break;
+						case Keys.LEFT:
+							break;
+						case Keys.RIGHT:
+							break;
+						case Keys.ENTER:
+							if($scope.curIdx >-1 && $scope.curIdx+1 <= matchList.length){
+								var item = matchList[$scope.curIdx];
+								$scope.selectItem(item);
+							}
+							break;
 					}
 					$scope.$apply();
 					e.preventDefault;
 					e.stopPropagation();
-
 				});			
+				//todo
+				$scope.$watch("curIdx", function(nv, ov){
+					if(nv===ov)
+						return;
+					if(nv>-1){ //has list, change focus					 	
+					 	ulCtrl[0].focus();
+					}
+					if(nv==-1){						
+						inputCtrl[0].focus();
+					}
+				});
 				//preprocess the datalist, deal with delimiter and igore term
 				var processData = function(datalist, sfield, ignore){
 					if(!datalist || datalist.length==0 || !sfield || !datalist[0][sfield])
@@ -120,7 +165,9 @@
 							var effectiveStr = datalist[i][sfield].substring(0, ignoreIdx);
 							result.push({
 								title: datalist[i][sfield],
-								searchTitle: effectiveStr
+								searchTitle: effectiveStr,
+								displayText: $sce.trustAsHtml(datalist[i][sfield]),
+								match: true //init list 
 							});
 						}
 					}

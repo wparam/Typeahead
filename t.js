@@ -7,13 +7,13 @@
 		$templateCache.put('default.html', 
 			'<div class="autocomplete-container">' +
 				'<div class="dropdown">' + 
-					'<input type="text" ng-Model="inputText" placeholder={{placeholder}} ng-blur="onBlur()"/>' + 
+					'<input type="text" ng-Model="inputText" placeholder={{placeholder}} ng-blur="onBlur()" ng-change="onChange()" />' + 
 					'<div ng-show="startSearch">' + 
 						'<ul class="dropdown-menu" >' +
-							'<li ng-class="$index === curIdx ? \'active\': \'\'" ng-repeat="item in dataList | filter: {match:true}">' + 
-								'<a ng-bind-html="item.displayText" ng-click="selectItem(item)"></a>' + 
+							'<li ng-class="$index === curIdx ? \'active\': \'\'" ng-repeat="item in dataList | filter: {match:true}" ng-mousedown="selectItem(item)">' + 
+								'<a ng-bind-html="item.displayText" ></a>' + 
 							'</li>' + 
-							'<li ng-show="{{(dataList | filter: {match:true}).length===0}}"><a><em><strong>No Match Result</strong></em></a></li>' + 
+							'<li ng-show="(dataList | filter: {match:true}).length===0"><a><em><strong>No Match Result</strong></em></a></li>' + 
 						'</ul>' +
 					'</div>' + 
 				'</div>' +
@@ -26,6 +26,7 @@
 				"placeholder" : "@placeholder",
 				"searchfield" : "@searchfield",
 				"ignorefield" : "@ignorefield",
+				"duplicate" : "=duplicate",
 				"datainputcol" : "=datainputcol",
 				"docustomaction": "=doCustomAction"
 			},
@@ -51,37 +52,146 @@
 					ESC: 27,
 					ENTER: 13
 				};
-				
-				$scope.$watch("inputText", function(newvalue, oldvalue){
-					var newstr = _.trim(newvalue),
-						oldstr = _.trim(oldvalue);
-					if(newstr === oldstr)
-						return;
-					if(!$scope.needSearch(newstr, oldstr))
-						return;
-					$scope.filterSearchKey(newstr, oldstr);
-					$scope.doSearch();
-				});
-				
 
-				$scope.needSearch = function(newstr, oldstr){
-					//todo
-					if(newstr!==oldstr)
+				$scope.$watch("selectedList", function(nv, ov){
+					if(nv === ov)
+						return;
+					if(nv.length===0)
+						return;
+					var result = '';
+					_.forEach(nv, function(n, key){
+						result += (n.title + $scope.delimiter + " ");
+					});
+					$scope.inputText = result;
+					$timeout(function(){
+						inputCtrl.focus();
+					});
+				}, true);
+
+				var syncSelectList = function(){
+					var inputstr = $scope.inputText;
+					if(!inputstr)
+						return;
+					var inputArr = inputstr.split($scope.delimiter).map(function(it){return _.trim(it);});
+					//sync user input and the selected list
+					_.forEach(inputArr, function(n, key){
+						if(!n)
+							return true;
+						var syncField = "",
+							findSelectItem, 
+							findItem;
+						if(n.toLowerCase().indexOf($scope.ignorefield)>=0){
+							syncField = n.substring(0, n.toLowerCase().indexOf($scope.ignorefield));
+							findSelectItem = _.find($scope.selectedList, { title: syncField});
+							findItem = _.find($scope.dataList, { title: syncField});
+						}
+						else{
+							syncField = n.toLowerCase();
+							findSelectItem = _.find($scope.selectedList, { searchTitle: syncField});
+							findItem = _.find($scope.dataList, { searchTitle: syncField});
+						}
+						if(!findSelectItem && findItem){
+							$scope.selectItem(findItem)
+						}
+					});					
+
+					_.forEach($scope.selectedList, function(n, key){
+						if(!n)
+							return true;
+						//for some items, auto append ignore field, should compare the searchTitle
+						var fidx = _.findIndex(inputArr, function(sn){
+							return n.searchTitle === sn.toLowerCase() || n.title === sn.toLowerCase();
+						}); 
+						if(fidx === -1)
+							$scope.removeItem(n);
+						
+					});	
+				}
+
+				$scope.onChange = function(){			
+					syncSelectList();
+					var searchTerm = $scope.filterSearchKey();
+					if($scope.needSearch(searchTerm))
+						$scope.searchTerm = searchTerm;
+					else
+						return;
+					$scope.doSearch();
+					$scope.lastSearchTerm = searchTerm;
+					console.log('Finish search, last search term is : ' + $scope.lastSearchTerm);
+				};
+
+				$scope.needSearch = function(searchTerm){
+					if(searchTerm!==$scope.lastSearchTerm)
 						return true;
+					//other check todo
 					return false;
 				};
 
-				$scope.filterSearchKey = function(newstr, oldstr){
-					//filter it, use delimiter	
-					//todo
-
-					$scope.lastSearchTerm = $scope.searchTerm = newstr;
-					if(!$scope.lastSearchTerm)
-						;
-					else{
+				var fetchTermByCursorPostion = function(pos, allInput){
+					var inputlen = allInput.length,
+						startIdx = -1,
+						endIdx = inputlen-1,
+						hitword = "";
+					if(inputlen===0 || pos<0)
+						return;
+					rightLoop:
+					for(var i = pos; i<inputlen; i++){
+						if(allInput[i] === $scope.delimiter){
+							endIdx = i;
+							break rightLoop;
+						}
 					}
-
-
+					var leftIdx = (pos > 0 && endIdx === pos) ? pos - 1 : pos;
+					leftLoop:
+					for(var j = leftIdx; j>=0; j--){
+						if(allInput[j] === $scope.delimiter){
+							startIdx = j;
+							break leftLoop;
+						}
+					}
+					hitword = _.trim(allInput.substring(startIdx+1, endIdx));
+					return hitword;
+				};
+				$scope.filterSearchKey = function(){
+					if(!$scope.inputText)
+						return;
+					var terms = $scope.inputText.split($scope.delimiter),
+						searchWord = "",
+						searchArr = [];
+					//filter the input list
+					for(var i = 0; i< terms.length && !!terms[i]; i++){
+						var flag = false,
+							term = _.trim(terms[i]);
+						_.forEach($scope.dataList, function(n, key){
+							if(n.title === term){
+								flag = true;
+								return false;
+							}
+						});
+						if(!flag)
+							searchArr.push(term);
+					}
+					
+					if(searchArr.length===0){
+						console.log('Unmatched elements is abnormal:0' );
+						return;
+					}
+					//more then 1 place need autocom
+					if(searchArr.length>1){
+						var cursorPos = inputCtrl[0].selectionEnd;
+						searchWord = fetchTermByCursorPostion(cursorPos, $scope.inputText);
+					}
+					else
+						searchWord = searchArr[0];
+					
+					//do with ignore part
+					var searchTerm = "";
+					if(searchWord.indexOf($scope.ignorefield)>=0){
+						searchTerm = searchWord.substring(0, searchArr[0].indexOf($scope.ignorefield));
+					}
+					else
+						searchTerm = searchWord;
+					return searchTerm;
 				};
 
 				$scope.doSearch = function(){
@@ -103,21 +213,35 @@
 				};
 
 				$scope.selectItem = function(sitem){
-					$scope.selectedList.push(sitem);
+					if(!$scope.duplicate){
+						$scope.removeItem(sitem);
+					}
+					var cpitem = _.cloneDeep(sitem);
+					$scope.selectedList.push(cpitem);
+					$scope.startSearch = false;
 					_.forEach($scope.dataList, function(n, key){
 						n.match = false;
 					});
+					$scope.lastSearchTerm = "";
+					$scope.curIdx = -1;
+				}
+				$scope.removeItem = function(ritem){
+					if(!ritem)
+						return;
+					if(_.find($scope.selectedList, {id : ritem.id}))
+						_.remove($scope.selectedList, function(sn){
+							return ritem.id === sn.id;
+						});
 				}
 				
 				$scope.onBlur = function(){
-					$timeout(function(){
-						//$scope.startSearch = false;	
-					});
+					$scope.startSearch = false;	
 				}
 				
 				ele.on('keyup', function(e){
 					var keyCode = e.keyCode | e.which,
 						matchList = _.where($scope.dataList, {match: true});
+					
 					switch(keyCode){
 						case Keys.DOWN: 
 							if(matchList.length>0 && $scope.curIdx>=-1 && matchList.length > $scope.curIdx+1 ){
@@ -143,17 +267,7 @@
 					e.preventDefault;
 					e.stopPropagation();
 				});			
-				//todo
-				$scope.$watch("curIdx", function(nv, ov){
-					if(nv===ov)
-						return;
-					if(nv>-1){ //has list, change focus					 	
-					 	ulCtrl[0].focus();
-					}
-					if(nv==-1){						
-						inputCtrl[0].focus();
-					}
-				});
+
 				//preprocess the datalist, deal with delimiter and igore term
 				var processData = function(datalist, sfield, ignore){
 					if(!datalist || datalist.length==0 || !sfield || !datalist[0][sfield])
@@ -164,10 +278,11 @@
 						if(ignoreIdx>=0){
 							var effectiveStr = datalist[i][sfield].substring(0, ignoreIdx);
 							result.push({
-								title: datalist[i][sfield],
-								searchTitle: effectiveStr,
+								title: datalist[i][sfield].toLowerCase(),
+								searchTitle: effectiveStr.toLowerCase(),
 								displayText: $sce.trustAsHtml(datalist[i][sfield]),
-								match: true //init list 
+								match: true, //init list 
+								id: datalist[i].id || i
 							});
 						}
 					}

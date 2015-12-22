@@ -15,12 +15,12 @@
 			$scope.emaillist = [
 				{title: 'Aleeen@a.com', name: '1', id:1},
 				{title: 'Blexxxdhgc@a.com', name: '2', id:2},
-				{title: 'Blue@a.com', name: '23', id:23},
-				{title: 'Bgc@a.com', name: '21', id:21},
-				{title: 'bgc@a.com', name: '22', id:22},
-				{title: 'Cwidjq@a.com',name: '3', id:3},
-				{title: 'Ddfqqddw@a.com',name: '4', id:4},
-				{title: 'Blexxx@a.com',name: '5', id:5}
+				{title: 'Blue@a.com', name: '23', id:3},
+				{title: 'Bgc@a.com', name: '21', id:4},
+				{title: 'bgc@a.com', name: '22', id:5},
+				{title: 'Cwidjq@a.com',name: '3', id:6},
+				{title: 'Ddfqqddw@a.com',name: '4', id:7},
+				{title: 'Blexxx@a.com',name: '5', id:8}
 			];
 			$scope.test = "abcd";
 
@@ -35,7 +35,7 @@
 <body ng-app="app">
 	<div ng-controller="testController">
 		<div style="width:800px">
-			<div ac delimiter=";" datainputcol="emaillist" docustomaction="docustomaction" ignorefield="@a.com" searchfield="title" placeholder="Please input email address, use ; to seperate" ></div>
+			<div ac delimiter=";" datainputcol="emaillist" docustomaction="docustomaction" ignorefield="@a.com" duplicate="false" searchfield="title" placeholder="Please input email address, use ; to seperate" ></div>
 		</div>
 	</div>
 	

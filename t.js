@@ -6,8 +6,9 @@
 	function aotuComplete($templateCache, $sce,  $timeout){	
 		$templateCache.put('default.html', 
 			'<div class="autocomplete-container">' +
-				'<div class="dropdown">' + 
-					'<input type="text" ng-Model="inputText" placeholder={{placeholder}} ng-blur="onBlur()" ng-change="onChange()" />' + 
+				'<div class="input-group disabled">' + 
+					'<span class="input-group-addon" id="sizing-addon2"><i class="glyphicon glyphicon-envelope"></i></span>' +
+					'<input type="text" class="form-control" ng-Model="inputText" placeholder={{placeholder}} ng-blur="onBlur()" ng-change="onChange()" />' + 
 					'<div ng-show="startSearch">' + 
 						'<ul class="dropdown-menu" >' +
 							'<li ng-class="$index === curIdx ? \'active\': \'\'" ng-repeat="item in dataList | filter: {match:true}" ng-mousedown="selectItem(item)">' + 
@@ -28,7 +29,7 @@
 				"ignorefield" : "@ignorefield",
 				"duplicate" : "=duplicate",
 				"datainputcol" : "=datainputcol",
-				"docustomaction": "=doCustomAction"
+				"inputText" : "=result"
 			},
 			templateUrl: function(ele, attrs){
 				return attrs.templateurl || 'default.html';
@@ -41,7 +42,7 @@
 				$scope.dataList = []; //all elements 
 				$scope.isMatchItem = false;
 				$scope.selectedList = []; //[{searchTitle: "abc", title:xxx, displayText:xxx}]
-
+				$scope.result = $scope.selectedList;
 				var inputCtrl = ele.find('input'),
 					ulCtrl = ele.find('ul');
 				var Keys = {
@@ -95,6 +96,8 @@
 						}
 					});					
 
+					if($scope.lastKeyCode === 46 || $scope.lastKeyCode ===8 )
+						return;
 					_.forEach($scope.selectedList, function(n, key){
 						if(!n)
 							return true;
@@ -108,7 +111,7 @@
 					});	
 				}
 
-				$scope.onChange = function(){			
+				$scope.onChange = function(e){			
 					syncSelectList();
 					var searchTerm = $scope.filterSearchKey();
 					if($scope.needSearch(searchTerm))
@@ -237,11 +240,18 @@
 				$scope.onBlur = function(){
 					$scope.startSearch = false;	
 				}
-				
-				ele.on('keyup', function(e){
+				$scope.lastKeyCode = 0;
+				ele.on('keydown', function(e){
+					var keyCode = e.keyCode | e.which;
+					console.log('hit key down');
+					console.log(keyCode);
+				});
+				ele.on('keydown', function(e){
 					var keyCode = e.keyCode | e.which,
 						matchList = _.where($scope.dataList, {match: true});
-					
+					$scope.lastKeyCode = keyCode;
+					console.log('hit');
+					console.log(keyCode);
 					switch(keyCode){
 						case Keys.DOWN: 
 							if(matchList.length>0 && $scope.curIdx>=-1 && matchList.length > $scope.curIdx+1 ){
@@ -295,7 +305,3 @@
 
 })();
 
-// https://github.com/JustGoscha/allmighty-autocomplete/blob/master/script/autocomplete.js
-// https://github.com/darylrowland/angucomplete/blob/master/angucomplete.js
-// https://github.com/ghiden/angucomplete-alt/blob/master/angucomplete-alt.js
-// https://github.com/hakib/MassAutocomplete/blob/master/massautocomplete.js

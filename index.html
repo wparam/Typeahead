@@ -11,7 +11,7 @@
 	<script type="text/javascript">
 	(function(){
 		var app = angular.module("app", ['myapp']);
-		app.controller('testController', ['$scope', function($scope){
+		app.controller('testController', ['$scope', '$timeout', function($scope, $timeout){
 			$scope.emaillist = [
 				{title: 'Aleeen@a.com', name: '1', id:1},
 				{title: 'Blexxxdhgc@a.com', name: '2', id:2},
@@ -22,11 +22,7 @@
 				{title: 'Ddfqqddw@a.com',name: '4', id:7},
 				{title: 'Blexxx@a.com',name: '5', id:8}
 			];
-			$scope.test = "abcd";
 
-			$scope.docustomaction = function(){
-				console.log('hit cus action');
-			};
 		}]);
 	})();
 	
@@ -34,8 +30,11 @@
 </head>
 <body ng-app="app">
 	<div ng-controller="testController">
-		<div style="width:800px">
-			<div ac delimiter=";" datainputcol="emaillist" docustomaction="docustomaction" ignorefield="@a.com" duplicate="false" searchfield="title" placeholder="Please input email address, use ; to seperate" ></div>
+		<div ng-show="false">
+			<div style="width:800px">
+				<div ac delimiter=";" datainputcol="emaillist" docustomaction="docustomaction" ignorefield="@a.com" duplicate="false" searchfield="title" placeholder="Please input email address, use ; to seperate" result = "result"></div>
+			</div>
+			<button ng-click="showResult()" >abc</button>
 		</div>
 	</div>
 	

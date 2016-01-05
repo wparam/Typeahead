@@ -1,5 +1,5 @@
 <head>
-	 <link rel="stylesheet" href="bootstrap.css"/>
+	 <link rel="stylesheet" href="css/bootstrap.css"/>
 	 <link rel="stylesheet" href="style.css"/>
 	 <script src="lib/jquery-1.11.3.js"></script>
 	<script src="lib/angular.js"></script>
@@ -12,17 +12,31 @@
 	(function(){
 		var app = angular.module("app", ['myapp']);
 		app.controller('testController', ['$scope', '$timeout', function($scope, $timeout){
-			$scope.emaillist = [
-				{title: 'Aleeen@a.com', name: '1', id:1},
-				{title: 'Blexxxdhgc@a.com', name: '2', id:2},
-				{title: 'Blue@a.com', name: '23', id:3},
-				{title: 'Bgc@a.com', name: '21', id:4},
-				{title: 'bgc@a.com', name: '22', id:5},
+			var emaillist = [
+				{title: 'Daoyu.Zhou@a.com', name: '1', id:1},
+				{title: 'Ximeng.Shao@a.com', name: '2', id:2},
+				{title: 'Jiahong.Liu@a.com', name: '23', id:3},
+				{title: 'Chao.Zhang@a.com', name: '21', id:4},
+				{title: 'Ehtan.My@a.com', name: '22', id:5},
 				{title: 'Cwidjq@a.com',name: '3', id:6},
 				{title: 'Ddfqqddw@a.com',name: '4', id:7},
 				{title: 'Blexxx@a.com',name: '5', id:8}
 			];
-
+			var target = [];
+			_.forEach(emaillist, function(n, key){
+                var effectiveStr = n.title.substring(0, n.title.indexOf('@'));
+                target.push({
+                    title: n.title,
+                    lowerTitle: n.title.toLowerCase(),
+                    searchTitle: effectiveStr,
+                    searchLowerTitle: effectiveStr.toLowerCase(),
+                    id: n.id
+                });
+                
+            });
+            $scope.emaillist = target;
+	        $scope.inputvalue = '';
+	        $scope.selectedlist = [];
 		}]);
 	})();
 	
@@ -30,11 +44,11 @@
 </head>
 <body ng-app="app">
 	<div ng-controller="testController">
-		<div ng-show="false">
+		<div >
 			<div style="width:800px">
-				<div ac delimiter=";" datainputcol="emaillist" docustomaction="docustomaction" ignorefield="@a.com" duplicate="false" searchfield="title" placeholder="Please input email address, use ; to seperate" result = "result"></div>
+				<div ac delimiter=";" datainputcol="emaillist" docustomaction="docustomaction" signclass="glyphicon glyphicon-envelope" inputclass="form-control" ignorefield="@" duplicate="false" searchfield="title" placeholder="Please input email address, use ; to seperate" inputvalue="inputvalue" selectedlist="selectedlist"></div>
 			</div>
-			<button ng-click="showResult()" >abc</button>
+			<!-- <button ng-click="showResult()" >abc</button> -->
 		</div>
 	</div>
 	

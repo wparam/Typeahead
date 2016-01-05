@@ -6,9 +6,9 @@
 	function aotuComplete($templateCache, $sce,  $timeout){	
 		$templateCache.put('default.html', 
 			'<div class="autocomplete-container">' +
-				'<div class="input-group disabled">' + 
-					'<span class="input-group-addon" id="sizing-addon2"><i class="glyphicon glyphicon-envelope"></i></span>' +
-					'<input type="text" class="form-control" ng-Model="inputText" placeholder={{placeholder}} ng-blur="onBlur()" ng-change="onChange()" />' + 
+				'<div class="input-group">' + 
+					'<span class="input-group-addon" id="sizing-addon2"><i class="{{signclass}}"></i></span>' + 
+					'<input type="text" ng-disabled="disableinput" ng-Model="inputText" class="{{inputclass}}" placeholder={{placeholder}} ng-blur="onBlur()" ng-change="onChange()" aria-describedby="sizing-addon2"/>' + 
 					'<div ng-show="startSearch">' + 
 						'<ul class="dropdown-menu" >' +
 							'<li ng-class="$index === curIdx ? \'active\': \'\'" ng-repeat="item in dataList | filter: {match:true}" ng-mousedown="selectItem(item)">' + 
@@ -24,12 +24,15 @@
 			restrict: "EA",
 			scope: {
 				"delimiter" : "@delimiter",
+				"signclass" : "@signclass",
+				"inputclass" : "@inputclass",
 				"placeholder" : "@placeholder",
-				"searchfield" : "@searchfield",
 				"ignorefield" : "@ignorefield",
 				"duplicate" : "=duplicate",
-				"datainputcol" : "=datainputcol",
-				"inputText" : "=result"
+				"dataList" : "=datainputcol",
+				"inputText" : "=inputvalue",
+				"selectedList" : "=selectedlist",
+				"disableinput" : "=disableinput"
 			},
 			templateUrl: function(ele, attrs){
 				return attrs.templateurl || 'default.html';
@@ -39,10 +42,8 @@
 				$scope.searchTerm = "";
 				$scope.startSearch = false; 
 				$scope.curIdx = -1;
-				$scope.dataList = []; //all elements 
 				$scope.isMatchItem = false;
-				$scope.selectedList = []; //[{searchTitle: "abc", title:xxx, displayText:xxx}]
-				$scope.result = $scope.selectedList;
+
 				var inputCtrl = ele.find('input'),
 					ulCtrl = ele.find('ul');
 				var Keys = {
@@ -57,8 +58,6 @@
 				$scope.$watch("selectedList", function(nv, ov){
 					if(nv === ov)
 						return;
-					if(nv.length===0)
-						return;
 					var result = '';
 					_.forEach(nv, function(n, key){
 						result += (n.title + $scope.delimiter + " ");
@@ -70,10 +69,8 @@
 				}, true);
 
 				var syncSelectList = function(){
-					var inputstr = $scope.inputText;
-					if(!inputstr)
-						return;
-					var inputArr = inputstr.split($scope.delimiter).map(function(it){return _.trim(it);});
+					var inputstr = $scope.inputText;					
+					var inputArr = inputstr.split($scope.delimiter).map(function(it){return _.trim(it).toLowerCase();});
 					//sync user input and the selected list
 					_.forEach(inputArr, function(n, key){
 						if(!n)
@@ -81,37 +78,41 @@
 						var syncField = "",
 							findSelectItem, 
 							findItem;
-						if(n.toLowerCase().indexOf($scope.ignorefield)>=0){
-							syncField = n.substring(0, n.toLowerCase().indexOf($scope.ignorefield));
-							findSelectItem = _.find($scope.selectedList, { title: syncField});
-							findItem = _.find($scope.dataList, { title: syncField});
+						if(n.indexOf($scope.ignorefield)>=0){
+							syncField = n;
+							findSelectItem = _.find($scope.selectedList, { lowerTitle: syncField});
+							findItem = _.find($scope.dataList, { lowerTitle: syncField});
 						}
 						else{
-							syncField = n.toLowerCase();
-							findSelectItem = _.find($scope.selectedList, { searchTitle: syncField});
-							findItem = _.find($scope.dataList, { searchTitle: syncField});
+							//do not match half of the string, cause issue
+							// syncField = n;
+							// findSelectItem = _.find($scope.selectedList, { searchLowerTitle: syncField});
+							// findItem = _.find($scope.dataList, { searchLowerTitle: syncField});
 						}
 						if(!findSelectItem && findItem){
-							$scope.selectItem(findItem)
+							console.log('find unadded item, add it:');
+							console.log(findItem);
+							$scope.selectItem(findItem);
 						}
 					});					
-
-					if($scope.lastKeyCode === 46 || $scope.lastKeyCode ===8 )
-						return;
+					if(inputArr.length === 1 && inputArr[0] === ""){
+						$scope.selectedList = []; //clear the list if text is empty;
+					}
 					_.forEach($scope.selectedList, function(n, key){
 						if(!n)
 							return true;
 						//for some items, auto append ignore field, should compare the searchTitle
 						var fidx = _.findIndex(inputArr, function(sn){
-							return n.searchTitle === sn.toLowerCase() || n.title === sn.toLowerCase();
+							return n.searchLowerTitle === sn.toLowerCase() || n.lowerTitle === sn.toLowerCase();
 						}); 
 						if(fidx === -1)
 							$scope.removeItem(n);
 						
 					});	
+
 				}
 
-				$scope.onChange = function(e){			
+				$scope.onChange = function(){			
 					syncSelectList();
 					var searchTerm = $scope.filterSearchKey();
 					if($scope.needSearch(searchTerm))
@@ -202,7 +203,7 @@
 						return;
 					$scope.startSearch = true;
 					_.forEach($scope.dataList, function(n, key){
-						if(n.searchTitle && n.searchTitle.toLowerCase().indexOf($scope.searchTerm)>=0){
+						if(n.searchLowerTitle && n.searchLowerTitle.indexOf($scope.searchTerm)>=0){
 							n.match = true;
 							var title = n.title;
 							var reg = new RegExp($scope.searchTerm, 'i');
@@ -240,18 +241,11 @@
 				$scope.onBlur = function(){
 					$scope.startSearch = false;	
 				}
-				$scope.lastKeyCode = 0;
-				ele.on('keydown', function(e){
-					var keyCode = e.keyCode | e.which;
-					console.log('hit key down');
-					console.log(keyCode);
-				});
+				$scope.lastKeyCode = '';
 				ele.on('keydown', function(e){
 					var keyCode = e.keyCode | e.which,
 						matchList = _.where($scope.dataList, {match: true});
 					$scope.lastKeyCode = keyCode;
-					console.log('hit');
-					console.log(keyCode);
 					switch(keyCode){
 						case Keys.DOWN: 
 							if(matchList.length>0 && $scope.curIdx>=-1 && matchList.length > $scope.curIdx+1 ){
@@ -279,29 +273,14 @@
 				});			
 
 				//preprocess the datalist, deal with delimiter and igore term
-				var processData = function(datalist, sfield, ignore){
-					if(!datalist || datalist.length==0 || !sfield || !datalist[0][sfield])
+				var processData = function(datalist){
+					if(!datalist || datalist.length==0 )
 						return;
 					var result = [];
-					for(var i = 0; i<datalist.length; i++){
-						var ignoreIdx = datalist[i][sfield].indexOf(ignore);
-						if(ignoreIdx>=0){
-							var effectiveStr = datalist[i][sfield].substring(0, ignoreIdx);
-							result.push({
-								title: datalist[i][sfield].toLowerCase(),
-								searchTitle: effectiveStr.toLowerCase(),
-								displayText: $sce.trustAsHtml(datalist[i][sfield]),
-								match: true, //init list 
-								id: datalist[i].id || i
-							});
-						}
-					}
-					$scope.dataList = result;
-				}
-				processData($scope.datainputcol, $scope.searchfield, $scope.ignorefield );
+					return;
+				}				
 			}
-		};	
+		};
 	}
-
 })();
 
